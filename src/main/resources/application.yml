@@ -6,7 +6,7 @@ server:
 spring:
   datasource:
     password:
-    url: jdbc:postgresql:paymentgatewayy?user=postgres&password=root
+    url: jdbc:postgresql:paymentgatewayy?user=postgres&password=youssef123
     username:
   jpa:
     hibernate:
