@@ -59,6 +59,7 @@ public class AppUser implements UserDetails {
         return Collections.singletonList(authority);
     }
 
+
     @Override
     public String getPassword() {
         return password;
