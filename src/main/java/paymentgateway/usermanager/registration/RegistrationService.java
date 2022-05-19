@@ -3,16 +3,17 @@ package paymentgateway.usermanager.registration;
 
 
 import lombok.AllArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import paymentgateway.usermanager.email.AppUser;
-import paymentgateway.usermanager.email.AppUserRole;
-import paymentgateway.usermanager.email.AppUserService;
-import paymentgateway.usermanager.email.EmailSender;
+import paymentgateway.usermanager.email.*;
 import paymentgateway.usermanager.registration.token.ConfirmationToken;
 import paymentgateway.usermanager.registration.token.ConfirmationTokenService;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @AllArgsConstructor
@@ -20,34 +21,58 @@ public class RegistrationService {
 
     private final AppUserService appUserService;
     private final EmailValidator emailValidator;
+    @Autowired
+    private PasswordEncoder bCryptPasswordEncoder;
     private final ConfirmationTokenService confirmationTokenService;
     private final EmailSender emailSender;
+    @Autowired
+    private AppUserRepository appUserRepository;
 
     public String register(RegistrationRequest request) {
-        boolean isValidEmail = emailValidator.
-                test(request.getEmail());
-
+        boolean isValidEmail = emailValidator.test(request.getEmail());
         if (!isValidEmail) {
             throw new IllegalStateException("email not valid");
         }
 
-        String token = appUserService.signUpUser(
+        String token = signUpUser(
                 new AppUser(
                         request.getFirstName(),
                         request.getLastName(),
                         request.getEmail(),
                         request.getPassword(),
-                        AppUserRole.USER
-
-                )
-        );
-
-        String link = "http://localhost:8090/api/v1/registration/confirm?token=" + token;
+                        AppUserRole.USER));
+        String link ="http://localhost:8080/api/v1/registration/confirm?token=" + token;
         emailSender.send(
                 request.getEmail(),
                 buildEmail(request.getFirstName(), link));
 
         return token;
+    }
+    public String signUpUser(AppUser user) {
+        Optional<AppUser> userExists = appUserRepository.findByEmail(user.getEmail());
+
+        if (userExists.isEmpty()) {
+            String encodedPassword = bCryptPasswordEncoder.encode(user.getPassword());
+
+            user.setPassword(encodedPassword);
+            user.setAppUserRole(AppUserRole.USER);
+            user.setEnabled(false);
+            user.setLocked(true);
+
+            appUserRepository.save(user);
+
+            String token = UUID.randomUUID().toString();
+
+            ConfirmationToken confirmationToken = new ConfirmationToken(token, LocalDateTime.now(), LocalDateTime.now().plusMinutes(15), user);
+
+            confirmationTokenService.saveConfirmationToken(confirmationToken);
+
+            return token;
+        }else{
+            throw new IllegalStateException("email already taken");
+        }
+
+
     }
 
     @Transactional
@@ -69,7 +94,7 @@ public class RegistrationService {
 
         confirmationTokenService.setConfirmedAt(token);
         appUserService.enableAppUser(
-                confirmationToken.getAppUser().getEmail());
+                confirmationToken.getAppUser());
         return "confirmed";
     }
 

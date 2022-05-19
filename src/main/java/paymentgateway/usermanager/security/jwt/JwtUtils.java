@@ -15,11 +15,9 @@ import java.util.Date;
 public class JwtUtils {
 	private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
 
-	@Value("${jwtSecret}")
-	private String jwtSecret;
+	private String jwtSecret="road_to_pfe";
 
-	@Value("${jwtExpirationMs}")
-	private int jwtExpirationMs;
+	private int jwtExpirationMs=86400000;
 
 	public String generateJwtToken(Authentication authentication) {
 
@@ -27,6 +25,9 @@ public class JwtUtils {
 
 		return Jwts.builder()
 				.setSubject(userPrincipal.getEmail())
+				.claim("id",userPrincipal.getId())
+				.claim("firstName",userPrincipal.getFirstName())
+				.claim("lastName",userPrincipal.getLastName())
 				.setIssuedAt(new Date())
 				.setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
 				.signWith(SignatureAlgorithm.HS512, jwtSecret)

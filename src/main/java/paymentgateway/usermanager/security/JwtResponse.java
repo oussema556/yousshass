@@ -14,13 +14,4 @@ import java.util.List;
 @Setter
 public class JwtResponse {
     private String token;
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
-    private String email;
-    private List<String> roles;
-    private String fistName;
-    private String lastName;
-    private Boolean active;
-
-
 }

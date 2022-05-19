@@ -14,6 +14,7 @@ import paymentgateway.usermanager.registration.token.ConfirmationToken;
 import paymentgateway.usermanager.registration.token.ConfirmationTokenService;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 
@@ -24,10 +25,8 @@ public class AppUserService implements UserDetailsService {
     private final static String USER_NOT_FOUND_MSG =
             "user with email %s not found";
 
-    private final AppUserRepository appUserRepository;
     @Autowired
-    private PasswordEncoder bCryptPasswordEncoder;
-    private final ConfirmationTokenService confirmationTokenService;
+    private AppUserRepository appUserRepository;
 
     @Override
     public UserDetails loadUserByUsername(String email)
@@ -37,39 +36,13 @@ public class AppUserService implements UserDetailsService {
                         new UsernameNotFoundException(
                                 String.format(USER_NOT_FOUND_MSG, email)));
     }
-
-    public String signUpUser(AppUser appUser) {
-        boolean userExists = appUserRepository
-                .findByEmail(appUser.getEmail())
-                .isPresent();
-
-        if (userExists) {
-            // TODO check of attributes are the same and
-            // TODO if email not confirmed send confirmation email.
-
-            throw new IllegalStateException("email already taken");
+    public AppUser enableAppUser(AppUser user) {
+        Optional<AppUser> userExists;
+        userExists = appUserRepository.findByEmail(user.getEmail());
+        if (userExists.isPresent()) {
+            user.setEnabled(true);
+            user.setLocked(false);
         }
-
-        String encodedPassword = bCryptPasswordEncoder
-                .encode(appUser.getPassword());
-
-        appUser.setPassword(encodedPassword);
-
-        appUserRepository.save(appUser);
-
-        String token=UUID.randomUUID().toString();
-        ConfirmationToken confirmationToken=new ConfirmationToken(
-                token,
-                LocalDateTime.now(),
-                LocalDateTime.now().plusMinutes(15),
-                appUser
-        );
-        confirmationTokenService.saveConfirmationToken(confirmationToken);
-
-        //TODO:SEND EMAIL
-        return token;
-    }
-    public int enableAppUser(String email) {
-        return appUserRepository.enableAppUser(email);
+        return appUserRepository.save(user);
     }
 }
